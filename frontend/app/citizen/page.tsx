@@ -75,14 +75,14 @@ export default function CitizenDashboardPage() {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {loading ? (
+        {loading || !dashboard ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
-            <KPICard label="My Complaints" value={dashboard!.myComplaints} icon={FileText} color="#2563EB" sub="Total submitted" />
-            <KPICard label="Resolved" value={dashboard!.resolved} icon={CheckCircle} color="#16A34A" sub="Successfully closed" />
-            <KPICard label="In Progress" value={dashboard!.inProgress} icon={Clock} color="#EA580C" sub="Being actioned" />
-            <KPICard label="Area Issues" value={dashboard!.areaIssues.toLocaleString()} icon={AlertTriangle} color="#DC2626" sub="In your region" />
+            <KPICard label="My Complaints" value={dashboard.myComplaints} icon={FileText} color="#2563EB" sub="Total submitted" />
+            <KPICard label="Resolved" value={dashboard.resolved} icon={CheckCircle} color="#16A34A" sub="Successfully closed" />
+            <KPICard label="In Progress" value={dashboard.inProgress} icon={Clock} color="#EA580C" sub="Being actioned" />
+            <KPICard label="Area Issues" value={dashboard.areaIssues.toLocaleString()} icon={AlertTriangle} color="#DC2626" sub="In your region" />
           </>
         )}
       </div>
