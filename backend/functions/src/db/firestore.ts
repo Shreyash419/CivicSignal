@@ -162,7 +162,11 @@ export const database = {
       list = list.filter((c) => c.citizenId === filters.citizenId);
     }
     if (filters?.status && filters.status !== 'all') {
-      list = list.filter((c) => c.status === filters.status);
+      if (filters.status === 'submitted') {
+        list = list.filter((c) => ['submitted', 'under_review', 'assigned'].includes(c.status));
+      } else {
+        list = list.filter((c) => c.status === filters.status);
+      }
     }
     if (filters?.category && filters.category !== 'all') {
       list = list.filter((c) => c.category === filters.category);
