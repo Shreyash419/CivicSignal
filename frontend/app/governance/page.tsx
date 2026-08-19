@@ -15,139 +15,16 @@ import Link from 'next/link';
 
 const PIE_COLORS = ['#2563EB', '#EA580C', '#16A34A', '#7C3AED', '#0891B2', '#65A30D', '#94A3B8'];
 
-// Simplified interactive map placeholder
-function DemandHotspotMap({ hotspots }: { hotspots: Hotspot[] }) {
-  const [hovered, setHovered] = useState<Hotspot | null>(null);
+import dynamic from 'next/dynamic';
 
-  // Place dots at approximate positions on a world map container
-  const positionMap: Record<string, { top: string; left: string }> = {
-    'HOT-001': { top: '28%', left: '63%' },
-    'HOT-002': { top: '25%', left: '64%' },
-    'HOT-003': { top: '65%', left: '55%' },
-    'HOT-004': { top: '52%', left: '32%' },
-    'HOT-005': { top: '70%', left: '54%' },
-    'HOT-006': { top: '50%', left: '35%' },
-    'HOT-007': { top: '20%', left: '68%' },
-    'HOT-008': { top: '30%', left: '74%' },
-  };
-
-  const prioritySize: Record<string, number> = {
-    critical: 26,
-    high: 20,
-    medium: 14,
-    low: 10,
-  };
-
-  const priorityColor: Record<string, string> = {
-    critical: '#DC2626',
-    high: '#EA580C',
-    medium: '#CA8A04',
-    low: '#16A34A',
-  };
-
-  return (
-    <div className="relative map-placeholder rounded-xl overflow-hidden" style={{ height: 340 }}>
-      {/* SVG world map background (simplified grid) */}
-      <div className="absolute inset-0 opacity-20">
-        <svg width="100%" height="100%" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
-          {/* Simplified continent shapes */}
-          {/* Americas */}
-          <ellipse cx="200" cy="150" rx="70" ry="100" fill="#94A3B8" opacity="0.5" />
-          <ellipse cx="220" cy="280" rx="55" ry="90" fill="#94A3B8" opacity="0.5" />
-          {/* Europe/Africa */}
-          <ellipse cx="400" cy="130" rx="45" ry="60" fill="#94A3B8" opacity="0.5" />
-          <ellipse cx="410" cy="250" rx="55" ry="100" fill="#94A3B8" opacity="0.5" />
-          {/* Asia */}
-          <ellipse cx="570" cy="140" rx="110" ry="80" fill="#94A3B8" opacity="0.5" />
-          {/* Australia */}
-          <ellipse cx="640" cy="300" rx="40" ry="30" fill="#94A3B8" opacity="0.4" />
-        </svg>
-      </div>
-
-      {/* Grid lines */}
-      <div className="absolute inset-0" style={{
-        backgroundImage: `
-          linear-gradient(rgba(148,163,184,0.1) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(148,163,184,0.1) 1px, transparent 1px)
-        `,
-        backgroundSize: '40px 40px',
-      }} />
-
-      <div className="absolute top-3 left-4">
-        <p className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>BRICS Demand Hotspots</p>
-        <p className="text-xs mt-0.5" style={{ color: 'var(--foreground-muted)' }}>Live priority view · Click to explore</p>
-      </div>
-
-      {/* Legend */}
-      <div className="absolute bottom-3 left-4 flex items-center gap-3">
-        {[
-          { label: 'Critical', color: '#DC2626' },
-          { label: 'High', color: '#EA580C' },
-          { label: 'Medium', color: '#CA8A04' },
-          { label: 'Low', color: '#16A34A' },
-        ].map(item => (
-          <div key={item.label} className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full" style={{ background: item.color }} />
-            <span className="text-xs" style={{ color: 'var(--foreground-muted)' }}>{item.label}</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Hotspot dots */}
-      {hotspots.map(hotspot => {
-        const pos = positionMap[hotspot.id];
-        if (!pos) return null;
-        const size = prioritySize[hotspot.priority] ?? 14;
-        const color = priorityColor[hotspot.priority] ?? '#94A3B8';
-        return (
-          <div
-            key={hotspot.id}
-            className="heatmap-dot"
-            style={{
-              top: pos.top,
-              left: pos.left,
-              width: size,
-              height: size,
-              background: color,
-              opacity: 0.85,
-              boxShadow: `0 0 0 ${size / 3}px ${color}30`,
-            }}
-            onMouseEnter={() => setHovered(hotspot)}
-            onMouseLeave={() => setHovered(null)}
-          />
-        );
-      })}
-
-      {/* Tooltip */}
-      {hovered && (() => {
-        const pos = positionMap[hovered.id];
-        const topNum = parseFloat(pos?.top ?? '50');
-        const tooltipTop = topNum > 60 ? `${topNum - 30}%` : `${topNum + 5}%`;
-        const leftNum = parseFloat(pos?.left ?? '50');
-        const tooltipLeft = leftNum > 65 ? `${leftNum - 30}%` : `${leftNum + 3}%`;
-        return (
-          <div
-            className="absolute z-10 pointer-events-none"
-            style={{ top: tooltipTop, left: tooltipLeft }}
-          >
-            <div className="card p-3 shadow-lg min-w-[180px] animate-fade-in">
-              <p className="font-semibold text-xs mb-1" style={{ color: 'var(--primary)' }}>
-                {getCountryFlag(hovered.country)} {hovered.regionName}
-              </p>
-              <p className="text-xs mb-1.5" style={{ color: 'var(--foreground-muted)' }}>Top issue: {hovered.topIssue}</p>
-              <div className="flex items-center justify-between">
-                <span className={`badge border text-xs ${getPriorityBadgeClass(hovered.priority)}`}>
-                  {hovered.priority}
-                </span>
-                <span className="text-xs font-bold" style={{ color: 'var(--primary)' }}>{hovered.priorityScore.toFixed(1)}</span>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+const RealWorldMap = dynamic(() => import('@/components/maps/RealWorldMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-[380px] rounded-xl bg-slate-100 animate-pulse flex items-center justify-center border border-slate-200">
+      <div className="text-sm font-medium text-slate-500">Loading Live World Map...</div>
     </div>
-  );
-}
+  ),
+});
 
 function KPICard({
   label, value, icon: Icon, color, change, sub,
@@ -265,7 +142,11 @@ export default function GovernanceOverview() {
               Full map <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          {loading ? <div className="skeleton h-[340px] rounded-xl" /> : <DemandHotspotMap hotspots={hotspots} />}
+          {loading ? (
+            <div className="skeleton h-[340px] rounded-xl" />
+          ) : (
+            <RealWorldMap hotspots={hotspots} selectedHotspot={null} onSelectHotspot={() => {}} />
+          )}
         </div>
 
         {/* Issue Distribution */}

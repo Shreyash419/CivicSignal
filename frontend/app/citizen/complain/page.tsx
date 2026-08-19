@@ -132,6 +132,30 @@ export default function ComplainPage() {
     return errs;
   };
 
+  const [autoCoords, setAutoCoords] = useState<{ lat?: number; lng?: number; name: string }>({ name: 'Detecting...' });
+
+  const detectLocation = () => {
+    setLocationMethod('auto');
+    setErrors(p => ({ ...p, location: '' }));
+    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setAutoCoords({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            name: `GPS: ${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`,
+          });
+        },
+        (err) => {
+          console.warn('GPS location error, using default:', err);
+          setAutoCoords({ lat: 26.7606, lng: 83.3732, name: 'Gorakhpur, Uttar Pradesh' });
+        }
+      );
+    } else {
+      setAutoCoords({ lat: 26.7606, lng: 83.3732, name: 'Gorakhpur, Uttar Pradesh' });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs = validate();
@@ -143,7 +167,9 @@ export default function ComplainPage() {
         text: text || '[Voice complaint recorded]',
         category,
         location: {
-          region: locationMethod === 'auto' ? 'Patna' : manualLocation,
+          region: locationMethod === 'auto' ? (autoCoords.name.includes('GPS') ? 'Local Area' : autoCoords.name) : manualLocation,
+          lat: locationMethod === 'auto' ? autoCoords.lat : undefined,
+          lng: locationMethod === 'auto' ? autoCoords.lng : undefined,
           country: 'India',
           manualAddress: locationMethod === 'manual' ? manualLocation : undefined,
         },
@@ -373,7 +399,7 @@ export default function ComplainPage() {
                   ? 'border-blue-500 bg-blue-50 text-blue-700'
                   : 'border-slate-200 hover:border-blue-300 text-slate-600'
               )}
-              onClick={() => { setLocationMethod('auto'); setErrors(p => ({ ...p, location: '' })); }}
+              onClick={detectLocation}
             >
               <Navigation className="w-4 h-4" />
               Use current location
@@ -394,9 +420,11 @@ export default function ComplainPage() {
           </div>
 
           {locationMethod === 'auto' && (
-            <div className="flex items-center gap-2 p-3 rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
-              <CheckCircle className="w-4 h-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">Location detected: Patna, Bihar, India</span>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span className="text-sm font-medium text-emerald-800">
+                Location detected: {autoCoords.name}
+              </span>
             </div>
           )}
 
