@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import {
   MessageSquare,
   Mic,
@@ -14,10 +15,20 @@ import {
   Loader2,
   Navigation,
   Square,
+  Map,
 } from 'lucide-react';
 import { submitComplaint } from '@/lib/api';
 import type { ComplaintSubmission } from '@/types';
 import { cn } from '@/lib/utils';
+
+const LocationPickerMap = dynamic(() => import('@/components/maps/LocationPickerMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[280px] rounded-xl bg-slate-100 animate-pulse flex items-center justify-center text-xs text-slate-500 font-medium">
+      Loading Interactive Map Picker...
+    </div>
+  ),
+});
 
 const categories = [
   'Roads & Transport',
@@ -74,8 +85,9 @@ export default function ComplainPage() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [hasRecording, setHasRecording] = useState(false);
   const [images, setImages] = useState<string[]>([]);
-  const [locationMethod, setLocationMethod] = useState<'auto' | 'manual' | null>(null);
+  const [locationMethod, setLocationMethod] = useState<'auto' | 'manual' | 'map' | null>(null);
   const [manualLocation, setManualLocation] = useState('');
+  const [mapCoords, setMapCoords] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -129,6 +141,7 @@ export default function ComplainPage() {
     if (!category) errs.category = 'Please select a category.';
     if (!locationMethod) errs.location = 'Please provide your location.';
     if (locationMethod === 'manual' && !manualLocation) errs.location = 'Please enter your location.';
+    if (locationMethod === 'map' && !mapCoords) errs.location = 'Please pick a point on the map.';
     return errs;
   };
 
@@ -163,15 +176,34 @@ export default function ComplainPage() {
     setErrors({});
     setIsSubmitting(true);
     try {
+      let regionName = 'Patna';
+      let lat: number | undefined = undefined;
+      let lng: number | undefined = undefined;
+      let manualAddress: string | undefined = undefined;
+
+      if (locationMethod === 'auto') {
+        regionName = autoCoords.name.includes('GPS') ? 'Local Area' : autoCoords.name;
+        lat = autoCoords.lat;
+        lng = autoCoords.lng;
+      } else if (locationMethod === 'manual') {
+        regionName = manualLocation;
+        manualAddress = manualLocation;
+      } else if (locationMethod === 'map' && mapCoords) {
+        regionName = mapCoords.address;
+        lat = mapCoords.lat;
+        lng = mapCoords.lng;
+        manualAddress = mapCoords.address;
+      }
+
       const payload: ComplaintSubmission = {
         text: text || '[Voice complaint recorded]',
         category,
         location: {
-          region: locationMethod === 'auto' ? (autoCoords.name.includes('GPS') ? 'Local Area' : autoCoords.name) : manualLocation,
-          lat: locationMethod === 'auto' ? autoCoords.lat : undefined,
-          lng: locationMethod === 'auto' ? autoCoords.lng : undefined,
+          region: regionName,
+          lat,
+          lng,
           country: 'India',
-          manualAddress: locationMethod === 'manual' ? manualLocation : undefined,
+          manualAddress,
         },
         mediaUrls: images,
         language: 'en',
@@ -189,6 +221,7 @@ export default function ComplainPage() {
     setImages([]);
     setLocationMethod(null);
     setManualLocation('');
+    setMapCoords(null);
     setHasRecording(false);
     setRecordingDuration(0);
     setSubmittedId(null);
@@ -390,41 +423,69 @@ export default function ComplainPage() {
         {/* Location */}
         <div className="card">
           <label className="block text-sm font-semibold mb-3" style={{ color: 'var(--primary)' }}>Location</label>
-          <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 mb-4">
             <button
               type="button"
               className={cn(
-                'flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all',
+                'flex items-center gap-2 px-3 py-3 rounded-xl border-2 text-xs font-medium transition-all justify-center',
                 locationMethod === 'auto'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
                   : 'border-slate-200 hover:border-blue-300 text-slate-600'
               )}
               onClick={detectLocation}
             >
-              <Navigation className="w-4 h-4" />
-              Use current location
+              <Navigation className="w-4 h-4 shrink-0" />
+              Use GPS Location
             </button>
+
             <button
               type="button"
               className={cn(
-                'flex items-center gap-2 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all',
+                'flex items-center gap-2 px-3 py-3 rounded-xl border-2 text-xs font-medium transition-all justify-center',
+                locationMethod === 'map'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
+                  : 'border-slate-200 hover:border-blue-300 text-slate-600'
+              )}
+              onClick={() => { setLocationMethod('map'); setErrors(p => ({ ...p, location: '' })); }}
+            >
+              <Map className="w-4 h-4 shrink-0 text-blue-600" />
+              Select on Map
+            </button>
+
+            <button
+              type="button"
+              className={cn(
+                'flex items-center gap-2 px-3 py-3 rounded-xl border-2 text-xs font-medium transition-all justify-center',
                 locationMethod === 'manual'
-                  ? 'border-blue-500 bg-blue-50 text-blue-700'
+                  ? 'border-blue-500 bg-blue-50 text-blue-700 font-semibold'
                   : 'border-slate-200 hover:border-blue-300 text-slate-600'
               )}
               onClick={() => { setLocationMethod('manual'); setErrors(p => ({ ...p, location: '' })); }}
             >
-              <MapPin className="w-4 h-4" />
-              Enter manually
+              <MapPin className="w-4 h-4 shrink-0" />
+              Enter Manually
             </button>
           </div>
 
           {locationMethod === 'auto' && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
               <span className="text-sm font-medium text-emerald-800">
                 Location detected: {autoCoords.name}
               </span>
+            </div>
+          )}
+
+          {locationMethod === 'map' && (
+            <div className="mt-2">
+              <LocationPickerMap
+                initialLat={autoCoords.lat ?? 25.5941}
+                initialLng={autoCoords.lng ?? 85.1376}
+                onLocationSelect={(loc) => {
+                  setMapCoords({ lat: loc.lat, lng: loc.lng, address: loc.address });
+                  setErrors(p => ({ ...p, location: '' }));
+                }}
+              />
             </div>
           )}
 
@@ -438,7 +499,7 @@ export default function ComplainPage() {
             />
           )}
 
-          {errors.location && <p className="text-xs text-red-600 mt-1">{errors.location}</p>}
+          {errors.location && <p className="text-xs text-red-600 mt-2">{errors.location}</p>}
         </div>
 
         {/* Submit */}
