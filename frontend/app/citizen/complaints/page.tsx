@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { MapPin, Calendar, ChevronRight, Filter } from 'lucide-react';
+import Link from 'next/link';
+import { MapPin, Calendar, ChevronRight, Filter, UserCheck, Plus, Sparkles } from 'lucide-react';
 import { getMyComplaints } from '@/lib/api';
 import type { Complaint, ComplaintStatus, Priority } from '@/types';
 import { getPriorityBadgeClass, getStatusColor, getStatusLabel, formatDate, getPriorityLabel, getTimeAgo } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 type FilterTab = 'all' | ComplaintStatus;
 
@@ -102,6 +104,7 @@ function ComplaintDetailModal({ complaint, onClose }: { complaint: Complaint; on
 }
 
 export default function ComplaintsPage() {
+  const { userProfile } = useAuth();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
@@ -112,13 +115,36 @@ export default function ComplaintsPage() {
     getMyComplaints({ status: activeFilter })
       .then(setComplaints)
       .finally(() => setLoading(false));
-  }, [activeFilter]);
+  }, [activeFilter, userProfile]);
 
   return (
     <div className="animate-fade-in">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--primary)' }}>My Complaints</h1>
-        <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>Track and manage all your submitted complaints</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-bold" style={{ color: 'var(--primary)' }}>My Complaints</h1>
+            {userProfile && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Firestore Synced
+              </span>
+            )}
+          </div>
+          <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
+            {userProfile
+              ? `Showing complaints registered for ${userProfile.displayName} (${userProfile.email})`
+              : 'Track and manage all your submitted complaints'}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Link
+            href="/citizen/complain"
+            className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5 shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            File New Complaint
+          </Link>
+        </div>
       </div>
 
       {/* Filter Tabs */}

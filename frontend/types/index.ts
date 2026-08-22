@@ -14,11 +14,14 @@ export interface Location {
   region: string;
   district?: string;
   country: Country;
+  manualAddress?: string;
 }
 
 export interface Complaint {
   id: string;
   citizenId: string;
+  citizenName?: string;
+  citizenEmail?: string;
   text: string;
   originalLanguage?: string;
   translatedText?: string;
@@ -28,6 +31,7 @@ export interface Complaint {
   status: ComplaintStatus;
   location: Location;
   mediaUrls?: string[];
+  audioUrl?: string;
   aiClassification?: string;
   aiConfidence?: number;
   createdAt: string;
@@ -224,6 +228,28 @@ export interface ComplaintSubmission {
   mediaUrls?: string[];
   audioUrl?: string;
   language?: string;
+  citizenId?: string;
+  citizenName?: string;
+  citizenEmail?: string;
+}
+
+// ── Authentication & Users ─────────────────────────────────────
+export type UserRole = 'citizen' | 'government';
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: UserRole;
+  phoneNumber?: string;
+  region?: string;
+  country: Country;
+  department?: string; // Government department (e.g. Roads, Healthcare, Water & Sanitation)
+  designation?: string; // Official title (e.g. District Officer, Chief Engineer)
+  badgeNumber?: string; // Official Gov / Badge ID
+  avatarUrl?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── API Response wrapper ──────────────────────────────────────
@@ -233,3 +259,4 @@ export interface ApiResponse<T> {
   message?: string;
   timestamp: string;
 }
+

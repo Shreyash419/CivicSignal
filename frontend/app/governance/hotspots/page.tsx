@@ -6,7 +6,7 @@ import { getHotspots } from '@/lib/api';
 import type { Hotspot, Priority } from '@/types';
 import { getPriorityBadgeClass, getCountryFlag, getPriorityDot } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Filter, X, Users, AlertTriangle, Brain, RefreshCw } from 'lucide-react';
+import { Filter, X, Users, AlertTriangle, Brain, RefreshCw, MapPin } from 'lucide-react';
 
 // Dynamic import for Leaflet (SSR disabled)
 const RealWorldMap = dynamic(() => import('@/components/maps/RealWorldMap'), {
@@ -230,30 +230,40 @@ export default function HotspotsPage() {
                 </p>
                 <span className="text-[10px] text-slate-400">Click to focus on map</span>
               </div>
-              {hotspots.map((hotspot) => (
-                <button
-                  key={hotspot.id}
-                  className="w-full text-left card hover:shadow-md hover:border-blue-300 transition-all py-3 px-3.5 group"
-                  onClick={() => setSelectedHotspot(hotspot)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className={`priority-dot ${getPriorityDot(hotspot.priority)}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold truncate text-slate-800 group-hover:text-blue-600 transition-colors">
-                          {getCountryFlag(hotspot.country)} {hotspot.regionName}
-                        </p>
-                        <p className="text-xs truncate text-slate-500">
-                          {hotspot.topIssue} · {hotspot.complaintCount.toLocaleString()} complaints
-                        </p>
+              {hotspots.length === 0 ? (
+                <div className="card p-6 text-center">
+                  <MapPin className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm font-semibold text-slate-700">No Hotspots Generated Yet</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Hotspots are automatically generated and clustered on the map when citizens report issues with location coordinates.
+                  </p>
+                </div>
+              ) : (
+                hotspots.map((hotspot) => (
+                  <button
+                    key={hotspot.id}
+                    className="w-full text-left card hover:shadow-md hover:border-blue-300 transition-all py-3 px-3.5 group"
+                    onClick={() => setSelectedHotspot(hotspot)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`priority-dot ${getPriorityDot(hotspot.priority)}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate text-slate-800 group-hover:text-blue-600 transition-colors">
+                            {getCountryFlag(hotspot.country)} {hotspot.regionName}
+                          </p>
+                          <p className="text-xs truncate text-slate-500">
+                            {hotspot.topIssue} · {hotspot.complaintCount.toLocaleString()} complaints
+                          </p>
+                        </div>
                       </div>
+                      <span className="text-sm font-bold flex-shrink-0 ml-2 text-blue-600">
+                        {hotspot.priorityScore.toFixed(1)}
+                      </span>
                     </div>
-                    <span className="text-sm font-bold flex-shrink-0 ml-2 text-blue-600">
-                      {hotspot.priorityScore.toFixed(1)}
-                    </span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </>
           )}
         </div>

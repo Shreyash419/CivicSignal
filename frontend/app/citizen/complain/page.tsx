@@ -27,6 +27,7 @@ import {
 import { submitComplaint } from '@/lib/api';
 import type { ComplaintSubmission } from '@/types';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 
 const LocationPickerMap = dynamic(() => import('@/components/maps/LocationPickerMap'), {
   ssr: false,
@@ -108,6 +109,7 @@ function SuccessModal({ id, onClose }: { id: string; onClose: () => void }) {
 }
 
 export default function ComplainPage() {
+  const { userProfile } = useAuth();
   const [inputMethod, setInputMethod] = useState<InputMethod>('text');
   const [text, setText] = useState('');
   const [category, setCategory] = useState('');
@@ -402,12 +404,15 @@ export default function ComplainPage() {
           region: regionName,
           lat,
           lng,
-          country: 'India',
+          country: userProfile?.country || 'India',
           manualAddress,
         },
         mediaUrls: images,
         audioUrl: audioUrl || undefined,
         language: 'English',
+        citizenId: userProfile?.uid || 'CTZ-001',
+        citizenName: userProfile?.displayName || 'Citizen',
+        citizenEmail: userProfile?.email,
       };
 
       const result = await submitComplaint(payload);
@@ -438,9 +443,24 @@ export default function ComplainPage() {
   return (
     <div className="animate-fade-in max-w-2xl mx-auto pb-12">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-2 text-slate-900">Report an Issue</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+          <h1 className="text-2xl font-bold text-slate-900">Report an Issue</h1>
+          {userProfile ? (
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              Filing as: <span className="font-bold">{userProfile.displayName}</span> ({userProfile.region || 'Patna'})
+            </div>
+          ) : (
+            <Link
+              href="/login?role=citizen&redirect=/citizen/complain"
+              className="inline-flex items-center gap-1 text-xs text-blue-600 font-semibold hover:underline"
+            >
+              Sign in for live tracking &rarr;
+            </Link>
+          )}
+        </div>
         <p className="text-sm text-slate-600">
-          Describe a problem in your area via Text, Voice, or Photo. Our AI prioritizes and tracks it automatically.
+          Describe a problem in your area via Text, Voice, or Photo. Our AI prioritizes and tracks it automatically in Firebase.
         </p>
       </div>
 

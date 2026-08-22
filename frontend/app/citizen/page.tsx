@@ -42,18 +42,25 @@ function SkeletonCard() {
   );
 }
 
+import { useAuth } from '@/context/AuthContext';
+
 export default function CitizenDashboardPage() {
+  const { userProfile } = useAuth();
   const [dashboard, setDashboard] = useState<CitizenDashboard | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     getCitizenDashboard()
       .then(setDashboard)
       .finally(() => setLoading(false));
-  }, []);
+  }, [userProfile]);
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const displayName = userProfile?.displayName || dashboard?.name || 'Citizen';
+  const userRegion = userProfile?.region || dashboard?.region || 'Patna';
+  const userCountry = userProfile?.country || dashboard?.country || 'India';
 
   return (
     <div className="animate-fade-in space-y-8">
@@ -61,10 +68,10 @@ export default function CitizenDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--primary)' }}>
-            {greeting}, {dashboard?.name ?? 'Citizen'} 👋
+            {greeting}, {displayName} 👋
           </h1>
           <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
-            Here is what is happening in your area — <span className="font-medium">{dashboard?.region ?? 'Patna'}, {dashboard?.country ?? 'India'}</span>
+            Here is what is happening in your area — <span className="font-medium">{userRegion}, {userCountry}</span>
           </p>
         </div>
         <Link href="/citizen/complain" className="btn-primary shrink-0">
@@ -106,9 +113,21 @@ export default function CitizenDashboardPage() {
                 </div>
               ))}
             </div>
+          ) : !dashboard || dashboard.recentComplaints.length === 0 ? (
+            <div className="text-center py-10 px-4 border border-dashed rounded-xl border-slate-200">
+              <MessageSquarePlus className="w-8 h-8 text-blue-500 mx-auto mb-2 opacity-80" />
+              <p className="text-sm font-semibold text-slate-800 mb-1">No complaints submitted yet</p>
+              <p className="text-xs text-slate-500 mb-4 max-w-sm mx-auto">
+                You haven&apos;t filed any complaints yet. Report an issue in your area to track it live with AI classification.
+              </p>
+              <Link href="/citizen/complain" className="btn-primary text-xs px-4 py-2 inline-flex items-center gap-1.5 shadow-sm">
+                <MessageSquarePlus className="w-3.5 h-3.5" />
+                Report Your First Issue
+              </Link>
+            </div>
           ) : (
             <div className="space-y-3">
-              {dashboard?.recentComplaints.map(complaint => (
+              {dashboard.recentComplaints.map(complaint => (
                 <Link
                   key={complaint.id}
                   href={`/citizen/complaints`}

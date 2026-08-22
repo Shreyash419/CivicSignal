@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { getDashboardOverview, getHotspots, getAnalytics } from '@/lib/api';
 import type { DashboardOverview, Hotspot, Analytics } from '@/types';
-import { getPriorityBadgeClass, getPriorityDot, getCountryFlag, formatNumber } from '@/lib/utils';
+import { getPriorityBadgeClass, getPriorityDot, getCountryFlag, formatNumber, getTimeAgo, getStatusColor, getStatusLabel } from '@/lib/utils';
 import Link from 'next/link';
 
 const PIE_COLORS = ['#2563EB', '#EA580C', '#16A34A', '#7C3AED', '#0891B2', '#65A30D', '#94A3B8'];
@@ -56,33 +56,58 @@ function KPICard({
   );
 }
 
+import { useAuth } from '@/context/AuthContext';
+import { getAllRealCitizenComplaints } from '@/lib/firebaseComplaints';
+import { mockComplaints } from '@/lib/mockData';
+import type { Complaint } from '@/types';
+import { Inbox, Sparkles, User, Calendar } from 'lucide-react';
+
 export default function GovernanceOverview() {
+  const { userProfile } = useAuth();
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [hotspots, setHotspots] = useState<Hotspot[]>([]);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
+  const [realComplaints, setRealComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isDemo = !userProfile || userProfile.uid.startsWith('gov-demo') || userProfile.email.includes('elena.rossi') || userProfile.displayName === 'Dr. Elena Rossi';
+
   useEffect(() => {
-    Promise.all([getDashboardOverview(), getHotspots(), getAnalytics()])
-      .then(([ov, hs, an]) => { setOverview(ov); setHotspots(hs); setAnalytics(an); })
+    setLoading(true);
+    const complaintsPromise = isDemo ? Promise.resolve(mockComplaints) : getAllRealCitizenComplaints();
+
+    Promise.all([
+      getDashboardOverview(),
+      getHotspots(),
+      getAnalytics(),
+      complaintsPromise,
+    ])
+      .then(([ov, hs, an, complaints]) => {
+        setOverview(ov);
+        setHotspots(hs);
+        setAnalytics(an);
+        setRealComplaints(complaints);
+      })
       .finally(() => setLoading(false));
-  }, []);
+  }, [userProfile]);
 
   const topRegions = hotspots.slice(0, 6);
 
   return (
     <div className="animate-fade-in space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--primary)' }}>Governance Overview</h1>
+          <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--primary)' }}>
+            Governance Overview {userProfile?.displayName ? `· ${userProfile.displayName}` : ''}
+          </h1>
           <p className="text-sm" style={{ color: 'var(--foreground-muted)' }}>
-            BRICS-wide citizen feedback intelligence · Real-time analytics
+            {userProfile?.department ? `${userProfile.department} · ` : ''}BRICS-wide citizen feedback intelligence · Real-time analytics
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border" style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border shrink-0" style={{ borderColor: '#BFDBFE', background: '#EFF6FF' }}>
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-          <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Live · 5 countries connected</span>
+          <span className="text-xs font-medium" style={{ color: 'var(--accent)' }}>Live Firestore Connected</span>
         </div>
       </div>
 
@@ -265,6 +290,80 @@ export default function GovernanceOverview() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Live Real Citizen Inflow Feed Card */}
+      <div className="card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-100">
+              <Inbox className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-base" style={{ color: 'var(--primary)' }}>
+                  Live Citizen Complaints Dataset
+                </h2>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              </div>
+              <p className="text-xs" style={{ color: 'var(--foreground-muted)' }}>
+                Real-time grievances filed by registered citizens via mobile & web portals
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/governance/complaints"
+            className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all self-start sm:self-auto"
+          >
+            Manage Citizen Dataset ({realComplaints.length}) <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="p-4 rounded-xl border border-slate-100">
+                <div className="skeleton h-4 w-1/2 mb-2" />
+                <div className="skeleton h-3 w-3/4 mb-2" />
+                <div className="skeleton h-3 w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : realComplaints.length === 0 ? (
+          <div className="p-8 text-center border border-dashed rounded-xl border-slate-200">
+            <Inbox className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+            <p className="text-sm font-semibold text-slate-700">No real citizen complaints received yet</p>
+            <p className="text-xs text-slate-400 mt-1">When citizens register and submit complaints, they will stream here in real-time.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {realComplaints.slice(0, 3).map(c => (
+              <Link
+                key={c.id}
+                href="/governance/complaints"
+                className="p-3.5 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/20 transition-all flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
+                      {c.id}
+                    </span>
+                    <span className={`badge border ${getStatusColor(c.status)}`} style={{ fontSize: '0.65rem' }}>
+                      {getStatusLabel(c.status)}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-800 line-clamp-2 mb-2">
+                    {c.text}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                  <span className="font-medium text-slate-700 truncate">{c.citizenName || 'Citizen'}</span>
+                  <span>{c.location.region}</span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
